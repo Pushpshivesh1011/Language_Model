@@ -1,1 +1,214 @@
-
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMJaGrmkWKRNO727mCv55kL",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Pushpshivesh1011/Language_Model/blob/main/N-Gram%20_NLTK\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "Pq1ycgNhZhZc"
+      },
+      "outputs": [],
+      "source": [
+        "pip install nltk"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import nltk\n",
+        "nltk.download('punkt')\n",
+        "from nltk.corpus import brown\n",
+        "from nltk.util import ngrams\n",
+        "from collections import defaultdict\n",
+        "import math\n",
+        "\n",
+        "def build_ngrams(data, n):\n",
+        "    ngrams_freq = defaultdict(lambda: defaultdict(int))\n",
+        "    for sentence in data:\n",
+        "        tokens = nltk.word_tokenize(sentence.lower())\n",
+        "        ngram_list = list(ngrams(tokens, n))\n",
+        "        for ngram in ngram_list:\n",
+        "            context = ngram[:-1]\n",
+        "            word = ngram[-1]\n",
+        "            ngrams_freq[context][word] += 1\n",
+        "    return ngrams_freq\n",
+        "\n",
+        "def calculate_perplexity(ngrams_freq, data, n):\n",
+        "    total_log_likelihood = 0\n",
+        "    total_words = 0\n",
+        "    for sentence in data:\n",
+        "        tokens = nltk.word_tokenize(sentence.lower())\n",
+        "        total_words += len(tokens)\n",
+        "        ngram_list = list(ngrams(tokens, n))\n",
+        "        for ngram in ngram_list:\n",
+        "            context = ngram[:-1]\n",
+        "            word = ngram[-1]\n",
+        "            count_context = sum(ngrams_freq[context].values())\n",
+        "            count_word = ngrams_freq[context][word]\n",
+        "            probability = count_word / count_context if count_context != 0 else 0\n",
+        "            log_likelihood = math.log(probability, 2) if probability != 0 else 0\n",
+        "            total_log_likelihood -= log_likelihood\n",
+        "\n",
+        "    perplexity = 2 ** (total_log_likelihood / total_words)\n",
+        "    return perplexity\n",
+        "\n",
+        "if __name__ == \"__main__\":\n",
+        "    nltk.download(\"brown\")\n",
+        "\n",
+        "\n",
+        "    data = brown.sents()[:100]\n",
+        "\n",
+        "    ngram_order = 3\n",
+        "\n",
+        "\n",
+        "    data = [\" \".join(sentence) for sentence in data]\n",
+        "\n",
+        "\n",
+        "    ngrams_freq = build_ngrams(data, ngram_order)\n",
+        "\n",
+        "\n",
+        "    perplexity = calculate_perplexity(ngrams_freq, data, ngram_order)\n",
+        "    print(\"Perplexity:\", perplexity)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "UnoBGlqYZ1yJ",
+        "outputId": "fb97eeb8-02a8-4049-fe39-e8d377e25da2"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[nltk_data] Downloading package punkt to /root/nltk_data...\n",
+            "[nltk_data]   Package punkt is already up-to-date!\n",
+            "[nltk_data] Downloading package brown to /root/nltk_data...\n",
+            "[nltk_data]   Package brown is already up-to-date!\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Perplexity: 1.2536049853387865\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "dimport nltk\n",
+        "from nltk.util import ngrams\n",
+        "from collections import defaultdict\n",
+        "import math\n",
+        "\n",
+        "def build_ngrams(data, n):\n",
+        "    ngrams_freq = defaultdict(lambda: defaultdict(int))\n",
+        "    for sentence in data:\n",
+        "        tokens = nltk.word_tokenize(sentence.lower())\n",
+        "        ngram_list = list(ngrams(tokens, n))\n",
+        "        for ngram in ngram_list:\n",
+        "            context = ngram[:-1]\n",
+        "            word = ngram[-1]\n",
+        "            ngrams_freq[context][word] += 1\n",
+        "    return ngrams_freq\n",
+        "\n",
+        "def calculate_perplexity(ngrams_freq, data, n):\n",
+        "    total_log_likelihood = 0\n",
+        "    total_words = 0\n",
+        "    for sentence in data:\n",
+        "        tokens = nltk.word_tokenize(sentence.lower())\n",
+        "        total_words += len(tokens)\n",
+        "        ngram_list = list(ngrams(tokens, n))\n",
+        "        for ngram in ngram_list:\n",
+        "            context = ngram[:-1]\n",
+        "            word = ngram[-1]\n",
+        "            count_context = sum(ngrams_freq[context].values())\n",
+        "            count_word = ngrams_freq[context][word]\n",
+        "            probability = count_word / count_context if count_context != 0 else 0\n",
+        "            log_likelihood = math.log(probability, 2) if probability != 0 else 0\n",
+        "            total_log_likelihood -= log_likelihood\n",
+        "\n",
+        "    perplexity = 2 ** (total_log_likelihood / total_words)\n",
+        "    return perplexity\n",
+        "\n",
+        "if __name__ == \"__main__\":\n",
+        "    nltk.download(\"punkt\")\n",
+        "    ngram_order = 3\n",
+        "\n",
+        "    print(\"Enter your sentences (one sentence per line). Type 'done' to finish:\")\n",
+        "    input_sentences = []\n",
+        "    while True:\n",
+        "        sentence = input()\n",
+        "        if sentence.lower() == \"done\":\n",
+        "            break\n",
+        "        input_sentences.append(sentence)\n",
+        "\n",
+        "\n",
+        "    ngrams_freq = build_ngrams(input_sentences, ngram_order)\n",
+        "\n",
+        "\n",
+        "    perplexity = calculate_perplexity(ngrams_freq, input_sentences, ngram_order)\n",
+        "    print(\"Perplexity:\", perplexity)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "z_C-d2z9GElU",
+        "outputId": "0610dc66-cb1c-4d7b-bcde-ad6bd0363036"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[nltk_data] Downloading package punkt to /root/nltk_data...\n",
+            "[nltk_data]   Package punkt is already up-to-date!\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Enter your sentences (one sentence per line). Type 'done' to finish:\n",
+            "The book I'm reading is really interesting.\n",
+            "ne\n",
+            "done\n",
+            "Perplexity: 1.0\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
