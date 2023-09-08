@@ -1,1 +1,419 @@
-
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMMZLvaWBjZZmuxU4Ymy6jW",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Pushpshivesh1011/Language_Model/blob/main/KenLM\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!wget -O - https://kheafield.com/code/kenlm.tar.gz |tar xz"
+      ],
+      "metadata": {
+        "id": "_ClF1j9EW3u5"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cd kenlm"
+      ],
+      "metadata": {
+        "id": "yFQSH3n5W81U"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!mkdir -p build"
+      ],
+      "metadata": {
+        "id": "MP1AKXm2aFYu"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cd build"
+      ],
+      "metadata": {
+        "id": "03fKPse5ZzqG"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!cmake .."
+      ],
+      "metadata": {
+        "id": "LXmnR0O0aQV2"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!make -j12"
+      ],
+      "metadata": {
+        "id": "pAqxPbBLbV83"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cd .."
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "_dNZCY1XYMXi",
+        "outputId": "1eec42e8-46e4-4fd9-e65e-7448c490b60d"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "/content/kenlm\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!wget -c https://github.com/vchahun/notes/raw/data/bible/bible.en.txt.bz2"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ujsJimgXU6mV",
+        "outputId": "7350c796-d4a3-4f02-9ed5-1934ff172743"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "--2023-08-11 05:39:04--  https://github.com/vchahun/notes/raw/data/bible/bible.en.txt.bz2\n",
+            "Resolving github.com (github.com)... 20.27.177.113\n",
+            "Connecting to github.com (github.com)|20.27.177.113|:443... connected.\n",
+            "HTTP request sent, awaiting response... 302 Found\n",
+            "Location: https://raw.githubusercontent.com/vchahun/notes/data/bible/bible.en.txt.bz2 [following]\n",
+            "--2023-08-11 05:39:05--  https://raw.githubusercontent.com/vchahun/notes/data/bible/bible.en.txt.bz2\n",
+            "Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.110.133, 185.199.108.133, 185.199.109.133, ...\n",
+            "Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|185.199.110.133|:443... connected.\n",
+            "HTTP request sent, awaiting response... 200 OK\n",
+            "Length: 869403 (849K) [application/octet-stream]\n",
+            "Saving to: ‘bible.en.txt.bz2’\n",
+            "\n",
+            "bible.en.txt.bz2    100%[===================>] 849.03K  --.-KB/s    in 0.06s   \n",
+            "\n",
+            "2023-08-11 05:39:06 (14.3 MB/s) - ‘bible.en.txt.bz2’ saved [869403/869403]\n",
+            "\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!bunzip2 -d bible.en.txt.bz2"
+      ],
+      "metadata": {
+        "id": "EXTpFmQHcTGn"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import nltk\n",
+        "nltk.download('punkt')\n",
+        "out = []\n",
+        "with open(\"/content/kenlm/bible.en.txt\", 'r') as f:\n",
+        "  for line in f.readlines():\n",
+        "      for sentence in nltk.sent_tokenize(line):\n",
+        "          out.append(' '.join(nltk.word_tokenize(sentence)).lower())"
+      ],
+      "metadata": {
+        "id": "oWuRrw5yVSI5"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "with open(\"/content/prepared_txt\", 'a') as f:\n",
+        "    for lines in out:\n",
+        "      f.write(lines)"
+      ],
+      "metadata": {
+        "id": "O0i-C4WyWTBY"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "! cat prepared_txt | /content/prepared_txt -o 3 > bible.arpa"
+      ],
+      "metadata": {
+        "id": "NLihkICbUcCF"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!build/bin/lmplz -o 5 </content/kenlm/bible.en.txt > text.arpa"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "FkGURY0BX3dV",
+        "outputId": "5d87e936-94d3-4229-834c-bb3fc004fddc"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "=== 1/5 Counting and sorting n-grams ===\n",
+            "Reading /content/kenlm/bible.en.txt\n",
+            "----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90---95--100\n",
+            "****************************************************************************************************\n",
+            "Unigram tokens 789635 types 28883\n",
+            "=== 2/5 Calculating and sorting adjusted counts ===\n",
+            "Chain sizes: 1:346596 2:1062468672 3:1992128896 4:3187406080 5:4648301056\n",
+            "Statistics:\n",
+            "1 28883 D1=0.60888 D2=1.04563 D3+=1.52459\n",
+            "2 207184 D1=0.746521 D2=1.15251 D3+=1.41667\n",
+            "3 458489 D1=0.846105 D2=1.24073 D3+=1.47382\n",
+            "4 601401 D1=0.91665 D2=1.38256 D3+=1.5303\n",
+            "5 647021 D1=0.909884 D2=1.47586 D3+=1.64442\n",
+            "Memory estimate for binary LM:\n",
+            "type       kB\n",
+            "probing 41803 assuming -p 1.5\n",
+            "probing 49340 assuming -r models -p 1.5\n",
+            "trie    19442 without quantization\n",
+            "trie    10363 assuming -q 8 -b 8 quantization \n",
+            "trie    17508 assuming -a 22 array pointer compression\n",
+            "trie     8429 assuming -a 22 -q 8 -b 8 array pointer compression and quantization\n",
+            "=== 3/5 Calculating and sorting initial probabilities ===\n",
+            "Chain sizes: 1:346596 2:3314944 3:9169780 4:14433624 5:18116588\n",
+            "----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90---95--100\n",
+            "####################################################################################################\n",
+            "=== 4/5 Calculating and writing order-interpolated probabilities ===\n",
+            "Chain sizes: 1:346596 2:3314944 3:9169780 4:14433624 5:18116588\n",
+            "----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90---95--100\n",
+            "####################################################################################################\n",
+            "=== 5/5 Writing ARPA model ===\n",
+            "----5---10---15---20---25---30---35---40---45---50---55---60---65---70---75---80---85---90---95--100\n",
+            "****************************************************************************************************\n",
+            "Name:lmplz\tVmPeak:10807276 kB\tVmRSS:7088 kB\tRSSMax:1920480 kB\tuser:2.10661\tsys:1.389\tCPU:3.49564\treal:3.27796\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!cat text.arpa"
+      ],
+      "metadata": {
+        "id": "EPzjFKkK44a6"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!chmod -R 777 bible.arpa"
+      ],
+      "metadata": {
+        "id": "pIgj56h_5Ch2"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!/content/bible.arpa bible.arpa bible.binary"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "H7a6CkcT5zG6",
+        "outputId": "f8395450-fb84-4b8c-f5e4-aab72cdcec1b"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "/bin/bash: line 1: /content/bible.arpa: No such file or directory\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!pip3 install kenlm"
+      ],
+      "metadata": {
+        "id": "i3vcd26Kaom9"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!python3 python/example.py"
+      ],
+      "metadata": {
+        "id": "wDyghJWxZ9eh"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import kenlm\n",
+        "#model = kenlm.LanguageModel('text.arpa')\n",
+        "#model.score('in the beginning was the word')"
+      ],
+      "metadata": {
+        "id": "JVLwUsPzDpoB"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cp python/example.py ."
+      ],
+      "metadata": {
+        "id": "r_fySBnSV1iw"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        " !python3 setup.py install"
+      ],
+      "metadata": {
+        "id": "cNe0rTC9aHAt"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import kenlm\n",
+        "\n",
+        "def load_model(model_path):\n",
+        "    return kenlm.Model(model_path)\n",
+        "\n",
+        "def calculate_perplexity(model, tokenized_sequence):\n",
+        "    log_likelihood = 0.0\n",
+        "    word_count = 0\n",
+        "\n",
+        "    for token in tokenized_sequence:\n",
+        "\n",
+        "        log_prob = model.score(token)\n",
+        "        log_likelihood += log_prob\n",
+        "        word_count += 1\n",
+        "\n",
+        "\n",
+        "    avg_log_likelihood = log_likelihood / word_count\n",
+        "\n",
+        "\n",
+        "    perplexity = 2 ** -avg_log_likelihood\n",
+        "    return perplexity\n",
+        "\n",
+        "\n",
+        "model_path = '/content/kenlm/text.arpa'\n",
+        "model = load_model(model_path)\n",
+        "\n",
+        "\n",
+        "tokenized_sequence = ['in', 'the', 'beginning', 'was', 'the', 'word']\n",
+        "\n",
+        "\n",
+        "perplexity = calculate_perplexity(model, tokenized_sequence)\n",
+        "print(\"Perplexity:\", perplexity)\n"
+      ],
+      "metadata": {
+        "id": "wewktiLZaasy"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!head /content/kenlm/text.arpa"
+      ],
+      "metadata": {
+        "id": "Je5JGa-Mw4JQ"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
