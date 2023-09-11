@@ -1,1 +1,885 @@
-
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Pushpshivesh1011/Language_Model/blob/main/RNN\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "q7ZCPv5TofwH",
+        "outputId": "9f86361b-2995-4a09-8327-3b90382f6d97"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Special character added to the beginning of each sentence.\n"
+          ]
+        }
+      ],
+      "source": [
+        "special_character = 'X'\n",
+        "input_file_path = '/content/only_bengali.txt'\n",
+        "output_file_path = 'special.txt'\n",
+        "\n",
+        "with open(input_file_path, 'r', encoding='utf-8') as input_file, open(output_file_path, 'w', encoding='utf-8') as output_file:\n",
+        "    output_file.writelines([special_character + line for line in input_file])\n",
+        "\n",
+        "print(\"Special character added to the beginning of each sentence.\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "DmgsBnHqQDty"
+      },
+      "outputs": [],
+      "source": [
+        "!pip install nltk\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "SfzZEZ1zofyQ"
+      },
+      "outputs": [],
+      "source": [
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "import torch.optim as optim\n",
+        "from torch.utils.data import DataLoader, TensorDataset\n",
+        "from nltk.tokenize import word_tokenize\n",
+        "from collections import Counter\n",
+        "import nltk\n",
+        "nltk.download('punkt')"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "K9bGq4Niof2_"
+      },
+      "outputs": [],
+      "source": [
+        "with open('/content/special.txt', 'r', encoding='utf-8') as file:\n",
+        "    sentences = file.readlines()\n",
+        "tokenized_sentences = [word_tokenize(sentence) for sentence in sentences]"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "JUKNtKN0sxPX",
+        "outputId": "40bb050d-259a-4d50-e0e2-728dab13aebd"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Vocabulary size: 45263\n"
+          ]
+        }
+      ],
+      "source": [
+        "word_counts = Counter([word for sentence in tokenized_sentences for word in sentence])\n",
+        "vocab = {word: idx for idx, (word, _) in enumerate(word_counts.most_common())}\n",
+        "vocab['<UNK>'] = len(vocab)\n",
+        "vocab_size = len(vocab)\n",
+        "print(f\"Vocabulary size: {vocab_size}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "iESESpx0sxST"
+      },
+      "outputs": [],
+      "source": [
+        "max_seq_length = 50\n",
+        "\n",
+        "padded_sequences = torch.zeros((len(tokenized_sentences), max_seq_length), dtype=torch.long)\n",
+        "for i, sentence in enumerate(tokenized_sentences):\n",
+        "    sequence = [vocab.get(word, vocab['<UNK>']) for word in sentence[:max_seq_length]]\n",
+        "    padded_sequences[i, :len(sequence)] = torch.tensor(sequence)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "xu64daZEtEZ8",
+        "outputId": "ec7a5665-01ee-4e60-fe9c-ce210dd83a7f"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Total words in training dataset: 842200\n",
+            "Total words in testing dataset: 210550\n"
+          ]
+        }
+      ],
+      "source": [
+        "train_ratio = 0.8\n",
+        "train_size = int(train_ratio * len(sentences))\n",
+        "train_data = padded_sequences[:train_size]\n",
+        "test_data = padded_sequences[train_size:]\n",
+        "\n",
+        "total_words_train = sum(len(sentence) for sentence in train_data)\n",
+        "total_words_test = sum(len(sentence) for sentence in test_data)\n",
+        "\n",
+        "print(f\"Total words in training dataset: {total_words_train}\")\n",
+        "print(f\"Total words in testing dataset: {total_words_test}\")\n",
+        "\n",
+        "\n",
+        "train_file_path = \"train_data.txt\"\n",
+        "test_file_path = \"test_data.txt\"\n",
+        "\n",
+        "with open(train_file_path, \"w\") as train_file:\n",
+        "    for sentence in train_data:\n",
+        "        sentence_text = \" \".join(map(str, sentence))\n",
+        "        train_file.write(sentence_text + \"\\n\")\n",
+        "\n",
+        "\n",
+        "with open(test_file_path, \"w\") as test_file:\n",
+        "    for sentence in test_data:\n",
+        "        sentence_text = \" \".join(map(str, sentence))\n",
+        "        test_file.write(sentence_text + \"\\n\")\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "YCJKyhS0tEcy"
+      },
+      "outputs": [],
+      "source": [
+        "batch_size = 64\n",
+        "input_dim = 128\n",
+        "hidden_dim = 256\n",
+        "num_layers = 2\n",
+        "num_epochs = 10\n",
+        "learning_rate = 0.001\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "16sgGA0DtQtB",
+        "outputId": "03a5702c-28d5-4ab5-cb7d-9df0ac23da3d"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Input data shape: (50, 64, 128)\n"
+          ]
+        }
+      ],
+      "source": [
+        "print(f\"Input data shape: ({max_seq_length}, {batch_size}, {input_dim})\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "WPz-DxjwtQv0"
+      },
+      "outputs": [],
+      "source": [
+        "train_loader = DataLoader(TensorDataset(train_data), batch_size=batch_size, shuffle=True)\n",
+        "test_loader = DataLoader(TensorDataset(test_data), batch_size=batch_size, shuffle=False)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "B9gKjLjdtQze"
+      },
+      "outputs": [],
+      "source": [
+        "class RNNModel(nn.Module):\n",
+        "    def __init__(self, vocab_size, input_dim, hidden_dim, num_layers):\n",
+        "        super(RNNModel, self).__init__()\n",
+        "        self.embedding = nn.Embedding(vocab_size, input_dim)\n",
+        "        self.rnn = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)\n",
+        "        self.fc = nn.Linear(hidden_dim, vocab_size)\n",
+        "\n",
+        "    def forward(self, x):\n",
+        "        embedded = self.embedding(x)\n",
+        "        output, _ = self.rnn(embedded)\n",
+        "        output = self.fc(output)\n",
+        "        return output\n",
+        "\n",
+        "model = RNNModel(vocab_size, input_dim, hidden_dim, num_layers)\n",
+        "criterion = nn.CrossEntropyLoss()\n",
+        "optimizer = optim.Adam(model.parameters(), lr=learning_rate)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "0EFzJahNwH3A"
+      },
+      "outputs": [],
+      "source": [
+        "device = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\n",
+        "model.to(device)\n",
+        "train_data = train_data.to(device)\n",
+        "test_data = test_data.to(device)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pGYdEW9GwH5x",
+        "outputId": "78771cef-2f01-4a25-a061-25536b8e1490"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch [1/10] - Average Loss: 3.0198\n",
+            "Epoch [2/10] - Average Loss: 2.5167\n",
+            "Epoch [3/10] - Average Loss: 2.4397\n",
+            "Epoch [4/10] - Average Loss: 2.3604\n",
+            "Epoch [5/10] - Average Loss: 2.2734\n",
+            "Epoch [6/10] - Average Loss: 2.1830\n",
+            "Epoch [7/10] - Average Loss: 2.0856\n",
+            "Epoch [8/10] - Average Loss: 1.9766\n",
+            "Epoch [9/10] - Average Loss: 1.8651\n",
+            "Epoch [10/10] - Average Loss: 1.7476\n",
+            "Training completed. You can print the evaluation results here.\n",
+            "Word_level_Model saved to rnn_model.pth\n"
+          ]
+        }
+      ],
+      "source": [
+        "for epoch in range(num_epochs):\n",
+        "    model.train()\n",
+        "    total_loss = 0.0\n",
+        "    for batch in train_loader:\n",
+        "        optimizer.zero_grad()\n",
+        "        inputs = batch[0].to(device)\n",
+        "        targets = inputs[:, 1:]\n",
+        "        outputs = model(inputs)\n",
+        "        loss = criterion(outputs[:, :-1].reshape(-1, vocab_size), targets.reshape(-1))\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "        total_loss += loss.item()\n",
+        "\n",
+        "\n",
+        "    average_loss = total_loss / len(train_loader)\n",
+        "    print(f\"Epoch [{epoch + 1}/{num_epochs}] - Average Loss: {average_loss:.4f}\")\n",
+        "\n",
+        "model.eval()\n",
+        "\n",
+        "print(\"Training completed. You can print the evaluation results here.\")\n",
+        "\n",
+        "model_save_path = 'rnn_model.pth'\n",
+        "torch.save(model.state_dict(), model_save_path)\n",
+        "print(f\"Word_level_Model saved to {model_save_path}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "4nbPMVzv9Wiv",
+        "outputId": "92c290a2-a7b8-4466-a37c-79e41282b583"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Cross-Entropy Loss in the 10th epoch: 0.2933\n",
+            "Perplexity on the 10th epoch: 1.0000\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torch\n",
+        "\n",
+        "num_epochs = 10\n",
+        "\n",
+        "total_loss_10th_epoch = 0.0\n",
+        "total_tokens_10th_epoch = 0\n",
+        "\n",
+        "for epoch in range(num_epochs):\n",
+        "    model.train()\n",
+        "    total_loss = 0.0\n",
+        "\n",
+        "    for batch in test_loader:\n",
+        "        optimizer.zero_grad()\n",
+        "        inputs = batch[0].to(device)\n",
+        "        targets = inputs[:, 1:]\n",
+        "        outputs = model(inputs)\n",
+        "        loss = criterion(outputs[:, :-1].reshape(-1, vocab_size), targets.reshape(-1))\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "        total_loss += loss.item()\n",
+        "        total_tokens = targets.numel()\n",
+        "        total_tokens_10th_epoch += total_tokens\n",
+        "\n",
+        "    if epoch == 9:\n",
+        "        total_loss_10th_epoch = total_loss\n",
+        "\n",
+        "average_loss_10th_epoch = total_loss_10th_epoch / len(train_loader)\n",
+        "print(f\"Cross-Entropy Loss in the 10th epoch: {average_loss_10th_epoch:.4f}\")\n",
+        "\n",
+        "normalized_loss = total_loss_10th_epoch / total_tokens_10th_epoch\n",
+        "perplexity_10th_epoch = torch.exp(torch.tensor(normalized_loss))\n",
+        "print(f\"Perplexity on the 10th epoch: {perplexity_10th_epoch:.4f}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "AZfjMN8DUJW8",
+        "outputId": "d7313e61-fc11-4a81-c099-8f6a9d6b28fd"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Padding removed and saved to paded_removed_word_test_data.txt\n"
+          ]
+        }
+      ],
+      "source": [
+        "def remove_padding(line):\n",
+        "\n",
+        "    parts = line.split('\\t')\n",
+        "    trimmed_parts = [part.strip() for part in parts]\n",
+        "\n",
+        "    cleaned_line = '\\t'.join(trimmed_parts)\n",
+        "\n",
+        "    return cleaned_line\n",
+        "\n",
+        "input_file = '/content/test_data.txt'\n",
+        "output_file = 'paded_removed_word_test_data.txt'\n",
+        "\n",
+        "with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:\n",
+        "    for line in infile:\n",
+        "        cleaned_line = remove_padding(line)\n",
+        "\n",
+        "        outfile.write(cleaned_line + '\\n')\n",
+        "\n",
+        "print(\"Padding removed and saved to\", output_file)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "fKN93v6hYlRw",
+        "outputId": "82e95131-8f09-4389-f2b3-128b16c4223f",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        }
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Enter the path to the dataset file (in .txt format): /content/paded_removed_word_test_data.txt\n",
+            "Enter the reduction type ('none', 'mean', or 'sum'): sum\n",
+            "Perplexity on the test dataset: 470746506978894415614790372163584.0000\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "from torch.utils.data import DataLoader, TensorDataset\n",
+        "\n",
+        "def calculate_perplexity(model, data_loader, vocab_size, device, reduction='mean'):\n",
+        "    model.eval()\n",
+        "    total_loss = 0.0\n",
+        "    total_tokens = 0\n",
+        "\n",
+        "    with torch.no_grad():\n",
+        "        for batch in data_loader:\n",
+        "            inputs = batch[0].to(device)\n",
+        "            targets = inputs[:, 1:]\n",
+        "            outputs = model(inputs)\n",
+        "            loss = criterion(outputs[:, :-1].reshape(-1, vocab_size), targets.reshape(-1))\n",
+        "\n",
+        "            if reduction == 'none':\n",
+        "                total_loss += loss.sum().item()\n",
+        "                total_tokens += targets.numel()\n",
+        "            elif reduction == 'mean':\n",
+        "                total_loss += loss.mean().item()\n",
+        "                total_tokens += targets.numel()\n",
+        "            elif reduction == 'sum':\n",
+        "                total_loss += loss.sum().item()\n",
+        "                total_tokens += targets.numel()\n",
+        "            else:\n",
+        "                raise ValueError(\"Invalid reduction type. Use 'none', 'mean', or 'sum'.\")\n",
+        "\n",
+        "    if reduction == 'none':\n",
+        "        normalized_loss = total_loss / total_tokens\n",
+        "    elif reduction == 'mean':\n",
+        "        normalized_loss = total_loss / len(data_loader)\n",
+        "    elif reduction == 'sum':\n",
+        "        normalized_loss = total_loss\n",
+        "\n",
+        "    perplexity = torch.exp(torch.tensor(normalized_loss))\n",
+        "\n",
+        "    return perplexity\n",
+        "\n",
+        "dataset_path = input(\"Enter the path to the dataset file (in .txt format): \")\n",
+        "\n",
+        "with open(dataset_path, 'r', encoding='utf-8') as file:\n",
+        "    text = file.read()\n",
+        "\n",
+        "reduction_type = input(\"Enter the reduction type ('none', 'mean', or 'sum'): \")\n",
+        "\n",
+        "perplexity = calculate_perplexity(model, test_loader, vocab_size, device, reduction=reduction_type)\n",
+        "\n",
+        "print(f\"Perplexity on the test dataset: {perplexity:.4f}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "55ocIdTlUKEF"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "1q2lhMUIUKHD"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "HBBx0UyPUKK2"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "1b3QeEyDUKPY"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "yXxu-W_6UKS1"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "kEvErlv8UKXi"
+      },
+      "outputs": [],
+      "source": []
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "fVSblN4u7NBh",
+        "outputId": "d10e2909-46fe-4190-c712-fb2cf0b3e107"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Vocabulary size: 317\n",
+            "Total characters in training dataset: 1662350\n",
+            "Total characters in testing dataset: 415600\n",
+            "Input data shape: (64, 50)\n",
+            "Epoch [1/10] - Average Loss: 2.8880\n",
+            "Epoch [2/10] - Average Loss: 2.2266\n",
+            "Epoch [3/10] - Average Loss: 1.9791\n",
+            "Epoch [4/10] - Average Loss: 1.8386\n",
+            "Epoch [5/10] - Average Loss: 1.7528\n",
+            "Epoch [6/10] - Average Loss: 1.6946\n",
+            "Epoch [7/10] - Average Loss: 1.6520\n",
+            "Epoch [8/10] - Average Loss: 1.6184\n",
+            "Epoch [9/10] - Average Loss: 1.5911\n",
+            "Epoch [10/10] - Average Loss: 1.5678\n",
+            "Training completed..\n",
+            "Char_Model saved to char_rnn_model.pth\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "import torch.optim as optim\n",
+        "from torch.utils.data import DataLoader, TensorDataset\n",
+        "from collections import Counter\n",
+        "import string\n",
+        "\n",
+        "with open('/content/special.txt', 'r', encoding='utf-8') as file:\n",
+        "    text = file.read()\n",
+        "\n",
+        "tokenized_text = list(text)\n",
+        "\n",
+        "vocab = {char: idx for idx, char in enumerate(set(tokenized_text))}\n",
+        "vocab['<UNK>'] = len(vocab)\n",
+        "\n",
+        "vocab_size = len(vocab)\n",
+        "print(f\"Vocabulary size: {vocab_size}\")\n",
+        "\n",
+        "max_seq_length = 50\n",
+        "\n",
+        "indexed_text = [vocab.get(char, vocab['<UNK>']) for char in tokenized_text]\n",
+        "\n",
+        "num_batches = len(indexed_text) // max_seq_length\n",
+        "padded_sequences = torch.zeros((num_batches, max_seq_length), dtype=torch.long)\n",
+        "for i in range(num_batches):\n",
+        "    start_idx = i * max_seq_length\n",
+        "    end_idx = start_idx + max_seq_length\n",
+        "    sequence = indexed_text[start_idx:end_idx]\n",
+        "    padded_sequences[i, :len(sequence)] = torch.tensor(sequence)\n",
+        "\n",
+        "data = padded_sequences\n",
+        "\n",
+        "train_ratio = 0.8\n",
+        "train_size = int(train_ratio * len(data))\n",
+        "\n",
+        "train_data = data[:train_size]\n",
+        "test_data = data[train_size:]\n",
+        "\n",
+        "total_chars_train = len(train_data.view(-1))\n",
+        "total_chars_test = len(test_data.view(-1))\n",
+        "\n",
+        "print(f\"Total characters in training dataset: {total_chars_train}\")\n",
+        "print(f\"Total characters in testing dataset: {total_chars_test}\")\n",
+        "\n",
+        "train_file_path = \"train_char_data.txt\"\n",
+        "test_file_path = \"test_char_data.txt\"\n",
+        "\n",
+        "with open(train_file_path, \"w\") as train_file:\n",
+        "    for sentence in train_data:\n",
+        "        sentence_text = \" \".join(map(str, sentence))\n",
+        "        train_file.write(sentence_text + \"\\n\")\n",
+        "\n",
+        "\n",
+        "with open(test_file_path, \"w\") as test_file:\n",
+        "    for sentence in test_data:\n",
+        "        sentence_text = \" \".join(map(str, sentence))\n",
+        "        test_file.write(sentence_text + \"\\n\")\n",
+        "\n",
+        "batch_size = 64\n",
+        "input_dim = 128\n",
+        "hidden_dim = 256\n",
+        "num_layers = 2\n",
+        "num_epochs = 10\n",
+        "learning_rate = 0.001\n",
+        "print(f\"Input data shape: ({batch_size}, {max_seq_length})\")\n",
+        "\n",
+        "train_loader = DataLoader(TensorDataset(train_data), batch_size=batch_size, shuffle=True)\n",
+        "test_loader = DataLoader(TensorDataset(test_data), batch_size=batch_size, shuffle=False)\n",
+        "\n",
+        "class CharRNNModel(nn.Module):\n",
+        "    def __init__(self, vocab_size, input_dim, hidden_dim, num_layers):\n",
+        "        super(CharRNNModel, self).__init__()\n",
+        "        self.embedding = nn.Embedding(vocab_size, input_dim)\n",
+        "        self.rnn = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)\n",
+        "        self.fc = nn.Linear(hidden_dim, vocab_size)\n",
+        "\n",
+        "    def forward(self, x):\n",
+        "        embedded = self.embedding(x)\n",
+        "        output, _ = self.rnn(embedded)\n",
+        "        output = self.fc(output)\n",
+        "        return output\n",
+        "\n",
+        "model = CharRNNModel(vocab_size, input_dim, hidden_dim, num_layers)\n",
+        "criterion = nn.CrossEntropyLoss()\n",
+        "optimizer = optim.Adam(model.parameters(), lr=learning_rate)\n",
+        "device = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\n",
+        "model.to(device)\n",
+        "train_data = train_data.to(device)\n",
+        "test_data = test_data.to(device)\n",
+        "\n",
+        "for epoch in range(num_epochs):\n",
+        "    model.train()\n",
+        "    total_loss = 0.0\n",
+        "    for batch in train_loader:\n",
+        "        optimizer.zero_grad()\n",
+        "        inputs = batch[0].to(device)\n",
+        "        targets = inputs[:, 1:]\n",
+        "        outputs = model(inputs)\n",
+        "        loss = criterion(outputs[:, :-1].reshape(-1, vocab_size), targets.reshape(-1))\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "        total_loss += loss.item()\n",
+        "\n",
+        "    average_loss = total_loss / len(train_loader)\n",
+        "    print(f\"Epoch [{epoch + 1}/{num_epochs}] - Average Loss: {average_loss:.4f}\")\n",
+        "\n",
+        "model.eval()\n",
+        "\n",
+        "print(\"Training completed..\")\n",
+        "\n",
+        "model_save_path = 'char_rnn_model.pth'\n",
+        "torch.save(model.state_dict(), model_save_path)\n",
+        "print(f\"Char_Model saved to {model_save_path}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "EqfE2Wcv7NJ2",
+        "outputId": "113c36ca-465b-4c69-e84f-282c7397679e"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Cross-Entropy Loss in the 10th epoch: 0.3759\n",
+            "Perplexity on the 10th epoch: 1.0000\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torch\n",
+        "\n",
+        "num_epochs = 10\n",
+        "\n",
+        "total_loss_10th_epoch = 0.0\n",
+        "total_tokens_10th_epoch = 0\n",
+        "\n",
+        "for epoch in range(num_epochs):\n",
+        "    model.train()\n",
+        "    total_loss = 0.0\n",
+        "\n",
+        "    for batch in test_loader:\n",
+        "        optimizer.zero_grad()\n",
+        "        inputs = batch[0].to(device)\n",
+        "        targets = inputs[:, 1:]\n",
+        "        outputs = model(inputs)\n",
+        "        loss = criterion(outputs[:, :-1].reshape(-1, vocab_size), targets.reshape(-1))\n",
+        "        loss.backward()\n",
+        "        optimizer.step()\n",
+        "        total_loss += loss.item()\n",
+        "        total_tokens = targets.numel()\n",
+        "        total_tokens_10th_epoch += total_tokens\n",
+        "\n",
+        "    if epoch == 9:\n",
+        "        total_loss_10th_epoch = total_loss\n",
+        "\n",
+        "average_loss_10th_epoch = total_loss_10th_epoch / len(train_loader)\n",
+        "print(f\"Cross-Entropy Loss in the 10th epoch: {average_loss_10th_epoch:.4f}\")\n",
+        "\n",
+        "normalized_loss = total_loss_10th_epoch / total_tokens_10th_epoch\n",
+        "perplexity_10th_epoch = torch.exp(torch.tensor(normalized_loss))\n",
+        "print(f\"Perplexity on the 10th epoch: {perplexity_10th_epoch:.4f}\")\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "x9i--Ac_YdZy",
+        "outputId": "61643f50-dfa4-49ba-a48e-ef4aa4f0280f"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Padding removed and saved to paded_removed_char_test_data.txt\n"
+          ]
+        }
+      ],
+      "source": [
+        "def remove_padding(line):\n",
+        "\n",
+        "    parts = line.split('\\t')\n",
+        "    trimmed_parts = [part.strip() for part in parts]\n",
+        "\n",
+        "    cleaned_line = '\\t'.join(trimmed_parts)\n",
+        "\n",
+        "    return cleaned_line\n",
+        "\n",
+        "input_file = '/content/test_char_data.txt'\n",
+        "output_file = 'paded_removed_char_test_data.txt'\n",
+        "\n",
+        "with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:\n",
+        "    for line in infile:\n",
+        "        cleaned_line = remove_padding(line)\n",
+        "\n",
+        "        outfile.write(cleaned_line + '\\n')\n",
+        "\n",
+        "print(\"Padding removed and saved to\", output_file)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ovOVnQjM6nOq",
+        "outputId": "d2633170-e8de-428c-b9cf-78861f5db13d"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Enter the path to the dataset file (in .txt format): /content/paded_removed_char_test_data.txt\n",
+            "Enter the reduction type ('none', 'mean', or 'sum'): sum\n",
+            "Perplexity on the test dataset: inf\n"
+          ]
+        }
+      ],
+      "source": [
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "from torch.utils.data import DataLoader, TensorDataset\n",
+        "\n",
+        "def calculate_perplexity(model, data_loader, vocab_size, device, reduction='mean'):\n",
+        "    model.eval()\n",
+        "    total_loss = 0.0\n",
+        "    total_tokens = 0\n",
+        "\n",
+        "    with torch.no_grad():\n",
+        "        for batch in data_loader:\n",
+        "            inputs = batch[0].to(device)\n",
+        "            targets = inputs[:, 1:]\n",
+        "            outputs = model(inputs)\n",
+        "            loss = criterion(outputs[:, :-1].reshape(-1, vocab_size), targets.reshape(-1))\n",
+        "\n",
+        "            if reduction == 'none':\n",
+        "                total_loss += loss.sum().item()\n",
+        "                total_tokens += targets.numel()\n",
+        "            elif reduction == 'mean':\n",
+        "                total_loss += loss.mean().item()\n",
+        "                total_tokens += targets.numel()\n",
+        "            elif reduction == 'sum':\n",
+        "                total_loss += loss.sum().item()\n",
+        "                total_tokens += targets.numel()\n",
+        "            else:\n",
+        "                raise ValueError(\"Invalid reduction type. Use 'none', 'mean', or 'sum'.\")\n",
+        "\n",
+        "    if reduction == 'none':\n",
+        "        normalized_loss = total_loss / total_tokens\n",
+        "    elif reduction == 'mean':\n",
+        "        normalized_loss = total_loss / len(data_loader)\n",
+        "    elif reduction == 'sum':\n",
+        "        normalized_loss = total_loss\n",
+        "\n",
+        "    perplexity = torch.exp(torch.tensor(normalized_loss))\n",
+        "\n",
+        "    return perplexity\n",
+        "\n",
+        "dataset_path = input(\"Enter the path to the dataset file (in .txt format): \")\n",
+        "\n",
+        "with open(dataset_path, 'r', encoding='utf-8') as file:\n",
+        "    text = file.read()\n",
+        "\n",
+        "reduction_type = input(\"Enter the reduction type ('none', 'mean', or 'sum'): \")\n",
+        "\n",
+        "perplexity = calculate_perplexity(model, test_loader, vocab_size, device, reduction=reduction_type)\n",
+        "\n",
+        "print(f\"Perplexity on the test dataset: {perplexity:.4f}\")\n"
+      ]
+    }
+  ],
+  "metadata": {
+    "accelerator": "GPU",
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMqVbvF5i24/ge5gpQf9k9l",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}
